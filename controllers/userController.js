@@ -86,7 +86,24 @@ const loginUser = asyncHandler(async (req, res) => {
 //@route Get /api/users/current
 //@access private
 const currentUser = asyncHandler(async (req, res) => {
-  res.json(req.user);
+  const { id, username, email } = req.user;
+
+  const mockUser = {
+    id: 1,
+    username: "abcd1234",
+    email: "aa@qq.com",
+    role: "member",
+    level: 3,
+  };
+
+  // Add headers to disable caching
+  res.set("Cache-Control", "no-store");
+  res.set("Pragma", "no-cache");
+  res.set("Expires", "0");
+  console.log(req.user);
+  const user = await User.findOne({ where: { id, username, email } });
+
+  return res.json(user);
 });
 
 module.exports = { registerUser, loginUser, currentUser };

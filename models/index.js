@@ -1,5 +1,5 @@
-const User = require("./User");
-const Contact = require("./Contact");
+const User = require("./userModel");
+const Contact = require("./contactModel");
 
 // Define associations
 User.hasMany(Contact, { foreignKey: "userId" });
