@@ -6,9 +6,30 @@ const sequelize = require("./config/testConnection"); // Import the sequelize in
 const { User, Contact } = require("./models"); // Import models
 
 const app = express();
-
-app.use(cors());
 const port = process.env.PORT || 5001;
+
+// 2 origin? this should be your frontend origin
+const allowedOrigins = ["http://localhost:3000", "http://localhost:5173", "*"];
+
+const corsOptions = {
+  origin: (origin, callback) => {
+    if (
+      !origin ||
+      allowedOrigins.includes(origin) ||
+      process.env.FRONTEND_URL === "*"
+    ) {
+      callback(null, true);
+    } else {
+      callback(new Error("Not allowed by CORS"));
+    }
+  },
+  methods: "GET,HEAD,PUT,PATCH,POST,DELETE",
+  allowedHeaders:
+    "Origin, X-Requested-With, Content-Type, Accept, Authorization",
+  credentials: true,
+};
+
+app.use(cors(corsOptions));
 
 // Middleware
 app.use(express.json());
