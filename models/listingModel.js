@@ -1,8 +1,8 @@
 const { Sequelize, DataTypes } = require("sequelize");
 const sequelize = require("../config/testConnection"); // Adjust to the correct path
 
-const User = sequelize.define(
-  "User",
+const Listing = sequelize.define(
+  "Listing",
   {
     id: {
       type: DataTypes.INTEGER,
@@ -28,6 +28,12 @@ const User = sequelize.define(
     user_id: {
       type: DataTypes.INTEGER,
       allowNull: false,
+      references: {
+        model: "users",
+        key: "id",
+      },
+      onDelete: "CASCADE",
+      onUpdate: "CASCADE",
     },
     createdAt: {
       type: DataTypes.DATE,
@@ -46,4 +52,4 @@ const User = sequelize.define(
   }
 );
 
-module.exports = User;
+module.exports = Listing;
