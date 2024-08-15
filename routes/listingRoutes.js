@@ -5,22 +5,9 @@ const {
   createListing,
 } = require("../controllers/listingController");
 const validateToken = require("../middleware/validateTokenHandler");
+const { parseFormData } = require("../middleware/parseFormData");
 
 const router = express.Router();
-
-// Middleware to parse FormData
-const parseFormData = (req, res, next) => {
-  const form = new formidable.IncomingForm();
-  form.parse(req, (err, fields, files) => {
-    if (err) {
-      return res.status(500).json({ message: "Error parsing form data" });
-    }
-    req.body = fields;
-    console.log(req.body);
-
-    next();
-  });
-};
 
 // Routes
 router.get("/", getAllListings);

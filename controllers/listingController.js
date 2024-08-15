@@ -16,13 +16,7 @@ const getAllListings = async (req, res) => {
 //@route public /api/listings
 //@access public
 const createListing = async (req, res) => {
-  // Extract and convert fields to strings if needed
-  const title = req.body.title ? req.body.title.toString() : "";
-  const description = req.body.description
-    ? req.body.description.toString()
-    : "";
-  const category = req.body.category ? req.body.category.toString() : "";
-  const price = req.body.price ? parseFloat(req.body.price) : 0;
+  const { title, description, category, price } = req.body;
 
   // Handling file
   // const image = req.files.image ? req.files.image[0] : null;

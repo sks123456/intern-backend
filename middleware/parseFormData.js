@@ -8,7 +8,18 @@ const parseFormData = (req, res, next) => {
     if (err) {
       return res.status(500).json({ message: "Error parsing form data" });
     }
-    req.body = fields;
+    body = {};
+    for (let key in fields) {
+      if (fields[key].length > 1) {
+        body[key] = fields[key];
+      } else {
+        body[key] = fields[key][0];
+      }
+    }
+    console.log(body);
+    req.body = body;
     next();
   });
 };
+
+module.exports = { parseFormData };
