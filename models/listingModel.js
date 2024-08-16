@@ -35,6 +35,10 @@ const Listing = sequelize.define(
       onDelete: "CASCADE",
       onUpdate: "CASCADE",
     },
+    sold: {
+      type: DataTypes.BOOLEAN,
+      defaultValue: false,
+    },
     createdAt: {
       type: DataTypes.DATE,
       allowNull: false,

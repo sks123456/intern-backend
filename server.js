@@ -36,6 +36,7 @@ app.use(express.json());
 app.use("/api/contacts", require("./routes/contactRoutes"));
 app.use("/api/users", require("./routes/userRoutes"));
 app.use("/api/listings", require("./routes/listingRoutes"));
+app.use("/api/eWallet", require("./routes/ewalletRoutes"));
 
 app.use(errorHandler);
 
