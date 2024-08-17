@@ -47,52 +47,59 @@ const registerUser = asyncHandler(async (req, res) => {
 const loginUser = asyncHandler(async (req, res) => {
   const { email, password } = req.body;
 
-  // Input validation
   if (!email || !password) {
-    res.status(400);
-    throw new Error("All fields are mandatory!");
+      res.status(400);
+      throw new Error("All fields are mandatory");
   }
 
-  // Finding user with the param email
-  const user = await User.findOne({ where: { email } });
-  console.log(user);
+  // Mock user data
+  const mockUser = {
+      id: 1,
+      name: "abcd",
+      username: 'abcd1234',
+      email: 'aa@qq.com',
+      password: await bcrypt.hash('11111', 10), // Still hash the password for future reference
+      role: 'admin',
+      level: 3,
+  };
 
-  // Compare pass with hashed pass
-  if (user && (await bcrypt.compare(password, user.password))) {
-    // Create access token using jwt
-    const accessToken = jwt.sign(
-      {
-        user: {
-          username: user.username,
-          email: user.email,
-          id: user.id,
-        },
-      },
-      // Token secret key in .env
-      process.env.ACCESS_TOKEN_SECRET,
-      {
-        // Token validation duration
-        expiresIn: "30m",
-      }
-    );
-    res.status(200).json({ accessToken });
+  // Bypass password comparison and allow login
+  if (email === mockUser.email) {
+      const accessToken = jwt.sign(
+          {
+              user: {
+                  username: mockUser.username,
+                  email: mockUser.email,
+                  id: mockUser.id,
+                  role: 'member'
+              },
+          },
+          process.env.ACCESS_TOKEN_SECRET,
+          {
+              expiresIn: "15m",
+          }
+      );
+      console.log("accessToken", accessToken);
+      res.status(200).json({ accessToken });
   } else {
-    res.status(401);
-    throw new Error("Email or Password is not valid");
+      res.status(401);
+      throw new Error("Email not valid");
   }
+
 });
+
 
 //@desc Current user info
 //@route Get /api/users/current
 //@access private
 const currentUser = asyncHandler(async (req, res) => {
-  const { id, username, email } = req.user;
-
   const mockUser = {
     id: 1,
+    name: "abcd",
     username: "abcd1234",
     email: "aa@qq.com",
-    role: "member",
+    password: await bcrypt.hash('11111', 10), // Hashing the password for consistency
+    role: "admin",
     level: 3,
   };
 
@@ -100,10 +107,13 @@ const currentUser = asyncHandler(async (req, res) => {
   res.set("Cache-Control", "no-store");
   res.set("Pragma", "no-cache");
   res.set("Expires", "0");
-  console.log(req.user);
-  const user = await User.findOne({ where: { id, username, email } });
 
-  return res.json(user);
+  // Log mock user data
+  console.log("Returning mock user:", mockUser);
+
+  // Return the mock user data instead of querying the database
+  return res.json(mockUser);
 });
+
 
 module.exports = { registerUser, loginUser, currentUser };

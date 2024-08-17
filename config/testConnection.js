@@ -25,6 +25,6 @@ const testConnection = async () => {
   }
 };
 
-testConnection();
+// testConnection();
 
 module.exports = sequelize; // Make sure this exports the sequelize instance

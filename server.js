@@ -2,7 +2,7 @@ const express = require("express");
 const errorHandler = require("./middleware/errorHandler");
 const dotenv = require("dotenv").config();
 const cors = require("cors");
-const sequelize = require("./config/testConnection"); // Import the sequelize instance
+// const sequelize = require("./config/testConnection"); // Import the sequelize instance
 const { User, Contact } = require("./models"); // Import models
 
 const app = express();
@@ -41,10 +41,10 @@ app.use("/api/eWallet", require("./routes/ewalletRoutes"));
 app.use(errorHandler);
 
 // Sync models
-sequelize
-  .sync({ force: false })
-  .then(() => console.log("Models synced with the database"))
-  .catch((err) => console.error("Error syncing models:", err));
+// sequelize
+//   .sync({ force: false })
+//   .then(() => console.log("Models synced with the database"))
+//   .catch((err) => console.error("Error syncing models:", err));
 
 app.listen(port, () => {
   console.log(`Server running on port ${port}`);
