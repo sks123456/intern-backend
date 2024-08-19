@@ -1,5 +1,7 @@
 const Wallet = require("../models/userwalletModel");
+
 const User = require("../models/userModel");
+const Coin = require("../models/coinsModel");
 
 const createWallet = async (req, res) => {
   const { coin } = req.body; // e.g., 'BTC', 'ETH', 'XRP'
@@ -202,6 +204,17 @@ const deleteWallet = async (req, res) => {
     return res.status(500).json({ message: "Internal server error" });
   }
 };
+
+const getAvailableCoins = async (req, res) => {
+  try {
+    const coins = await Coin.findAll();
+    res.json(coins);
+  } catch (error) {
+    console.error("Error fetching available coins:", error);
+    res.status(500).json({ message: "Internal Server Error" });
+  }
+};
+
 module.exports = {
   getWallets,
   deposit,
@@ -209,4 +222,5 @@ module.exports = {
   createWallet,
   withdraw,
   deleteWallet,
+  getAvailableCoins,
 };

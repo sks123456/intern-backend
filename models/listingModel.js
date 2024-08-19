@@ -25,11 +25,22 @@ const Listing = sequelize.define(
       type: DataTypes.DOUBLE,
       allowNull: false,
     },
-    user_id: {
+    payBy: {
       type: DataTypes.INTEGER,
       allowNull: false,
       references: {
-        model: "users",
+        model: "coins",
+        key: "id",
+      },
+      onDelete: "CASCADE",
+      onUpdate: "CASCADE",
+    },
+
+    wallet_id: {
+      type: DataTypes.INTEGER,
+      allowNull: false,
+      references: {
+        model: "wallets",
         key: "id",
       },
       onDelete: "CASCADE",

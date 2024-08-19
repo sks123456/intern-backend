@@ -6,6 +6,7 @@ const {
   createWallet,
   withdraw,
   deleteWallet,
+  getAvailableCoins,
 } = require("../controllers/ewalletController");
 const validateToken = require("../middleware/validateTokenHandler");
 
@@ -18,5 +19,6 @@ router.post("/deposit", deposit);
 router.post("/withdraw", withdraw);
 router.post("/purchase", purchase);
 router.post("/delete", deleteWallet);
+router.get("/availableCoins", getAvailableCoins);
 
 module.exports = router;

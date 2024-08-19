@@ -16,7 +16,7 @@ const getAllListings = async (req, res) => {
 //@route public /api/listings
 //@access public
 const createListing = async (req, res) => {
-  const { title, description, category, price } = req.body;
+  const { title, description, category, price, wallet_id } = req.body;
 
   // Handling file
   // const image = req.files.image ? req.files.image[0] : null;
@@ -27,6 +27,7 @@ const createListing = async (req, res) => {
       description,
       category,
       price,
+      wallet_id,
       user_id: req.user.id,
       // Optionally handle image upload path
     });

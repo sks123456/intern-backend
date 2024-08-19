@@ -31,7 +31,7 @@ const Contact = sequelize.define(
       allowNull: false,
       defaultValue: Sequelize.literal("CURRENT_TIMESTAMP"),
     },
-    userId: {
+    user_id: {
       type: DataTypes.INTEGER,
       allowNull: false,
       references: {
