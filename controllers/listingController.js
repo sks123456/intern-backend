@@ -1,5 +1,6 @@
 const asyncHandler = require("express-async-handler");
 const { Listing, Wallet, User, Coin } = require("../models"); // Ensure correct imports
+const sequelize = require("../config/testConnection"); // Adjust to the correct path
 
 // @desc Get all listings with user data
 // @route GET /api/listings
@@ -57,30 +58,23 @@ const getListings = asyncHandler(async (req, res) => {
   }
 });
 
-module.exports = {
-  getListings,
-};
-
-module.exports = {
-  getListings,
-};
-
 //@desc create a listing
 //@route public /api/listings
 //@access public
 const createListing = async (req, res) => {
-  const { title, description, category, price, wallet_id } = req.body;
+  const { title, description, category, price, wallet_id, pay_by } = req.body;
 
   // Handling file
   // const image = req.files.image ? req.files.image[0] : null;
 
   try {
-    const newListing = await db.Listing.create({
+    const newListing = await Listing.create({
       title,
       description,
       category,
       price,
       wallet_id,
+      payBy: pay_by,
       user_id: req.user.id,
       // Optionally handle image upload path
     });
@@ -89,7 +83,119 @@ const createListing = async (req, res) => {
     res.status(500).json({ message: error.message });
   }
 };
+// @desc Handle the purchase of a listing
+// @route POST /api/marketplace/purchase
+// @access Protected
+const purchaseItem = asyncHandler(async (req, res) => {
+  const { listingId } = req.body;
+  const userId = req.user.id;
+
+  // Start a transaction
+  const transaction = await sequelize.transaction();
+
+  try {
+    console.log(
+      `Starting purchase process for user ID: ${userId}, listing ID: ${listingId}`
+    );
+
+    // Fetch the listing and check if it's available
+    const listing = await Listing.findOne({
+      where: { id: listingId, sold: false },
+      include: [
+        { model: Wallet, attributes: ["id", "user_id"] },
+        { model: Coin, attributes: ["id", "symbol"] },
+      ],
+      transaction, // Include the transaction in the query
+      lock: true, // Lock the row to avoid race conditions
+    });
+
+    if (!listing) {
+      console.log("Listing not found or already sold");
+      await transaction.rollback(); // Rollback if listing is not found
+      return res
+        .status(404)
+        .json({ message: "Listing not found or already sold" });
+    }
+
+    console.log(
+      `Listing found: ${listing.title} (Price: ${listing.price} ${listing.payBy})`
+    );
+
+    // Fetch buyer's wallet for the relevant coin
+    const buyerWallet = await Wallet.findOne({
+      where: { user_id: userId, coin_id: listing.payBy },
+      transaction,
+      lock: true, // Lock the row for this wallet
+    });
+
+    if (!buyerWallet) {
+      console.log("Buyer wallet not found");
+      await transaction.rollback(); // Rollback if wallet is not found
+      return res.status(404).json({ message: "Wallet not found" });
+    }
+
+    console.log(`Buyer wallet found. Current balance: ${buyerWallet.balance}`);
+
+    // Check if the buyer has enough balance
+    if (buyerWallet.balance < listing.price) {
+      console.log("Insufficient balance for the purchase");
+      await transaction.rollback(); // Rollback if insufficient balance
+      return res.status(400).json({ message: "Insufficient balance" });
+    }
+
+    // Deduct the price from the buyer's wallet
+    buyerWallet.balance -= listing.price;
+    await buyerWallet.save({ transaction });
+    console.log(
+      `Deducted ${listing.price} from buyer's wallet. New balance: ${buyerWallet.balance}`
+    );
+
+    // Find the seller's wallet
+    const sellerWallet = await Wallet.findOne({
+      where: { id: listing.wallet_id },
+      transaction,
+      lock: true, // Lock the row for this wallet
+    });
+
+    if (!sellerWallet) {
+      console.log("Seller wallet not found");
+      await transaction.rollback(); // Rollback if seller's wallet is not found
+      return res.status(404).json({ message: "Seller's wallet not found" });
+    }
+
+    // Add the price to the seller's wallet
+    console.log(
+      `Adding ${listing.price} to seller's wallet. Before save: ${
+        sellerWallet.balance + listing.price
+      }`
+    );
+    sellerWallet.balance += listing.price;
+    await sellerWallet.save({ transaction });
+    console.log(
+      `Added ${listing.price} to seller's wallet (ID: ${sellerWallet.id}). New balance: ${sellerWallet.balance}`
+    );
+
+    // Transfer ownership (update the wallet_id or user_id in the listing)
+    listing.wallet_id = buyerWallet.id;
+    listing.sold = true;
+    await listing.save({ transaction });
+    console.log(
+      `Listing ownership transferred to buyer's wallet (ID: ${buyerWallet.id}) and marked as sold`
+    );
+
+    // Commit the transaction if everything is successful
+    await transaction.commit();
+    console.log("Transaction committed successfully");
+
+    res.status(200).json({ message: "Purchase successful", listing });
+  } catch (error) {
+    // Rollback the transaction in case of any error
+    await transaction.rollback();
+    console.error("Transaction failed and rolled back due to error:", error);
+    res.status(500).json({ message: "Purchase failed" });
+  }
+});
 
 // Other methods like updateListing, deleteListing can be added here...
 
-module.exports = { getListings, createListing };
+module.exports = { getListings, createListing, purchaseItem };

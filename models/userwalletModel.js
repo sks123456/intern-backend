@@ -1,6 +1,7 @@
 const { DataTypes } = require("sequelize");
 const sequelize = require("../config/testConnection");
 const User = require("./userModel");
+const Coin = require("./coinsModel");
 
 const Wallet = sequelize.define(
   "wallet",
@@ -18,9 +19,9 @@ const Wallet = sequelize.define(
         key: "id",
       },
     },
-    coin: {
-      type: DataTypes.STRING,
-      allowNull: false, // e.g., 'BTC', 'ETH', 'XRP'
+    coin_id: {
+      type: DataTypes.INTEGER,
+      allowNull: false,
     },
     balance: {
       type: DataTypes.DECIMAL(18, 8), // Higher precision for cryptocurrencies
@@ -33,7 +34,5 @@ const Wallet = sequelize.define(
     timestamps: true,
   }
 );
-
-Wallet.belongsTo(User, { foreignKey: "user_id" });
 
 module.exports = Wallet;
