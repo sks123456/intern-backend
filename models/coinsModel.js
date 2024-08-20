@@ -15,12 +15,10 @@ const Coin = sequelize.define(
     name: {
       type: DataTypes.STRING,
       allowNull: false,
-      unique: true,
     },
     symbol: {
       type: DataTypes.STRING,
       allowNull: false,
-      unique: true,
     },
   },
   {

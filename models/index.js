@@ -5,17 +5,31 @@ const Wallet = require("./userwalletModel");
 const Coin = require("./coinsModel");
 
 // Define associations
+
+// User model
 User.hasMany(Contact, { foreignKey: "user_id" });
 Contact.belongsTo(User, { foreignKey: "user_id" });
-User.hasMany(Contact, { foreignKey: "user_id" });
+
+User.hasMany(Wallet, { foreignKey: "user_id" }); // Wallet belongs to User
+Wallet.belongsTo(User, { foreignKey: "user_id" });
+
+User.hasMany(Listing, { foreignKey: "wallet_id", as: "listings" }); // Alias 'listings' for User model
+
+// Wallet model
 Wallet.hasMany(Listing, { foreignKey: "wallet_id" });
 Listing.belongsTo(Wallet, { foreignKey: "wallet_id" });
-Listing.hasMany(Coin, { foreignKey: "payBy" });
-Coin.belongsTo(Listing, { foreignKey: "payBy" });
+
+// Coin model
+Coin.hasMany(Listing, { foreignKey: "payBy" });
+Listing.belongsTo(Coin, { foreignKey: "payBy" });
+
+// Listing model
+Listing.belongsTo(User, { foreignKey: "wallet_id", as: "user" }); // Alias 'user' for Listing model
 
 module.exports = {
   User,
   Contact,
   Listing,
   Wallet,
+  Coin,
 };

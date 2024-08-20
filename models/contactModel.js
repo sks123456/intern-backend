@@ -2,7 +2,7 @@ const { Sequelize, DataTypes } = require("sequelize");
 const sequelize = require("../config/testConnection"); // Adjust to the correct path
 
 const Contact = sequelize.define(
-  "Contact",
+  "contact",
   {
     id: {
       type: DataTypes.INTEGER,

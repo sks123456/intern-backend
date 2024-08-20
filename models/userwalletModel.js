@@ -3,7 +3,7 @@ const sequelize = require("../config/testConnection");
 const User = require("./userModel");
 
 const Wallet = sequelize.define(
-  "Wallet",
+  "wallet",
   {
     id: {
       type: DataTypes.INTEGER,
