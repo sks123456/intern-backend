@@ -8,16 +8,6 @@ const sequelize = require("../config/testConnection"); // Adjust to the correct 
 const getListings = asyncHandler(async (req, res) => {
   try {
     const listings = await Listing.findAll({
-      attributes: [
-        "id",
-        "title",
-        "description",
-        "category",
-        "price",
-        "wallet_id",
-        "createdAt",
-        "updatedAt",
-      ],
       include: [
         {
           model: Wallet,
