@@ -1,4 +1,10 @@
-const { Wallet, User, Coin } = require("../models/index");
+const {
+  Wallet,
+  User,
+  Coin,
+  EwalletTransaction,
+  Listing,
+} = require("../models/index");
 
 const createWallet = async (req, res) => {
   const { coin_id } = req.body; // e.g., 'BTC', 'ETH', 'XRP'
@@ -57,6 +63,42 @@ const getWallets = async (req, res) => {
     res.status(500).json({ message: "Error fetching wallets", error });
   }
 };
+const getTransactionHistory = async (req, res) => {
+  const { walletId } = req.body;
+  if (!walletId) {
+    return res.status(400).json({ error: "wallet_id is required" });
+  }
+
+  try {
+    // Fetch transaction history with associated coins, listings, and user details
+    const transactions = await EwalletTransaction.findAll({
+      where: { walletId },
+      include: [
+        {
+          model: Coin,
+          attributes: ["id", "name", "symbol"], // Adjust attributes for Coin if needed
+        },
+        {
+          model: Listing,
+          attributes: ["id", "title", "price"], // Adjust attributes for Listing if needed
+          required: false, // This ensures that the Listing data is included only if listingId is not null
+        },
+        {
+          model: User,
+          attributes: ["username"], // Adjust attributes for User if needed
+        },
+      ],
+    });
+
+    // Return the transactions with associated details
+    res.json(transactions);
+  } catch (error) {
+    console.error("Error fetching transaction history:", error);
+    res
+      .status(500)
+      .json({ message: "Error fetching transaction history", error });
+  }
+};
 
 const deposit = async (req, res) => {
   const { walletId, amount } = req.body;
@@ -88,9 +130,20 @@ const deposit = async (req, res) => {
     const currentBalance = parseFloat(wallet.balance);
 
     // Ensure balance update maintains precision
-    wallet.balance = (currentBalance + depositAmount).toFixed(8); // Ensure precision
+    wallet.balance = (currentBalance + depositAmount).toFixed(8);
 
     await wallet.save();
+
+    // Record the deposit transaction
+    await EwalletTransaction.create({
+      userId,
+      walletId,
+      coinId: wallet.coin_id, // Assuming wallet has a coin_id field
+      type: "deposit",
+      status: "completed",
+      amount: depositAmount,
+      description: `Deposit of ${depositAmount} to wallet ${walletId}`,
+    });
 
     res.json({ message: "Deposit successful", balance: wallet.balance });
   } catch (error) {
@@ -134,62 +187,21 @@ const withdraw = async (req, res) => {
     wallet.balance -= withdrawalAmount;
     await wallet.save();
 
+    // Record the withdrawal transaction
+    await EwalletTransaction.create({
+      userId,
+      walletId,
+      coinId: wallet.coin_id, // Assuming wallet has a coin_id field
+      type: "withdrawal",
+      status: "completed",
+      amount: withdrawalAmount,
+      description: `Withdrawal of ${withdrawalAmount} from wallet ${walletId}`,
+    });
+
     res.json({ message: "Withdrawal successful", balance: wallet.balance });
   } catch (error) {
     console.error("Error processing withdrawal:", error);
     res.status(500).json({ message: "Error processing withdrawal", error });
-  }
-};
-
-const purchase = async (req, res) => {
-  const { coin, amount, listingId } = req.body;
-  const user_id = req.user.id;
-
-  if (!amount || amount <= 0 || !listingId) {
-    return res.status(400).json({ message: "Invalid purchase request" });
-  }
-
-  try {
-    // Find the user's wallet for the specified coin
-    const wallet = await Wallet.findOne({ where: { user_id: user_id, coin } });
-
-    if (!wallet) {
-      return res.status(404).json({ message: "Wallet not found" });
-    }
-
-    // Ensure the wallet has sufficient balance
-    const purchaseAmount = parseFloat(amount);
-    if (wallet.balance < purchaseAmount) {
-      return res.status(400).json({ message: "Insufficient balance" });
-    }
-
-    // Find the listing by ID
-    const listing = await Listing.findOne({ where: { id: listingId } });
-
-    if (!listing) {
-      return res.status(404).json({ message: "Listing not found" });
-    }
-
-    // Ensure the amount matches the listing price
-    if (purchaseAmount < listing.price) {
-      return res
-        .status(400)
-        .json({ message: "Amount is less than listing price" });
-    }
-
-    // Deduct the amount from the wallet
-    wallet.balance -= purchaseAmount;
-    await wallet.save();
-
-    // Handle the listing purchase logic here
-    // Example: mark the listing as sold or remove it from the marketplace
-    // listing.sold = true;
-    // await listing.save();
-
-    res.json({ message: "Purchase successful", balance: wallet.balance });
-  } catch (error) {
-    console.error("Error processing purchase:", error);
-    res.status(500).json({ message: "Error processing purchase", error });
   }
 };
 
@@ -228,9 +240,9 @@ const getAvailableCoins = async (req, res) => {
 module.exports = {
   getWallets,
   deposit,
-  purchase,
   createWallet,
   withdraw,
   deleteWallet,
   getAvailableCoins,
+  getTransactionHistory,
 };

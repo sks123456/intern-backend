@@ -1,5 +1,11 @@
 const asyncHandler = require("express-async-handler");
-const { Listing, Wallet, User, Coin } = require("../models"); // Ensure correct imports
+const {
+  Listing,
+  Wallet,
+  User,
+  Coin,
+  EwalletTransaction,
+} = require("../models"); // Ensure correct imports
 const sequelize = require("../config/testConnection"); // Adjust to the correct path
 
 // @desc Get all listings with user data
@@ -76,6 +82,7 @@ const createListing = async (req, res) => {
 // @desc Handle the purchase of a listing
 // @route POST /api/marketplace/purchase
 // @access Protected
+
 const purchaseItem = asyncHandler(async (req, res) => {
   const { listingId } = req.body;
   const userId = req.user.id;
@@ -95,13 +102,13 @@ const purchaseItem = asyncHandler(async (req, res) => {
         { model: Wallet, attributes: ["id", "user_id"] },
         { model: Coin, attributes: ["id", "symbol"] },
       ],
-      transaction, // Include the transaction in the query
-      lock: true, // Lock the row to avoid race conditions
+      transaction,
+      lock: true,
     });
 
     if (!listing) {
       console.log("Listing not found or already sold");
-      await transaction.rollback(); // Rollback if listing is not found
+      await transaction.rollback();
       return res
         .status(404)
         .json({ message: "Listing not found or already sold" });
@@ -115,12 +122,12 @@ const purchaseItem = asyncHandler(async (req, res) => {
     const buyerWallet = await Wallet.findOne({
       where: { user_id: userId, coin_id: listing.payBy },
       transaction,
-      lock: true, // Lock the row for this wallet
+      lock: true,
     });
 
     if (!buyerWallet) {
       console.log("Buyer wallet not found");
-      await transaction.rollback(); // Rollback if wallet is not found
+      await transaction.rollback();
       return res.status(404).json({ message: "Wallet not found" });
     }
 
@@ -129,7 +136,7 @@ const purchaseItem = asyncHandler(async (req, res) => {
     // Check if the buyer has enough balance
     if (buyerWallet.balance < listing.price) {
       console.log("Insufficient balance for the purchase");
-      await transaction.rollback(); // Rollback if insufficient balance
+      await transaction.rollback();
       return res.status(400).json({ message: "Insufficient balance" });
     }
 
@@ -140,32 +147,59 @@ const purchaseItem = asyncHandler(async (req, res) => {
       `Deducted ${listing.price} from buyer's wallet. New balance: ${buyerWallet.balance}`
     );
 
+    // Create a transaction record for the buyer's wallet
+    await EwalletTransaction.create(
+      {
+        userId: buyerWallet.user_id,
+        walletId: buyerWallet.id,
+        coinId: buyerWallet.coin_id,
+        type: "transfer",
+        status: "completed",
+        amount: listing.price,
+        description: `Purchase of listing ${listingId}`,
+        date: new Date(),
+        listingId: listing.id,
+      },
+      { transaction }
+    );
+
     // Find the seller's wallet
     const sellerWallet = await Wallet.findOne({
       where: { id: listing.wallet_id },
       transaction,
-      lock: true, // Lock the row for this wallet
+      lock: true,
     });
 
     if (!sellerWallet) {
       console.log("Seller wallet not found");
-      await transaction.rollback(); // Rollback if seller's wallet is not found
+      await transaction.rollback();
       return res.status(404).json({ message: "Seller's wallet not found" });
     }
 
     // Add the price to the seller's wallet
-    console.log(
-      `Adding ${listing.price} to seller's wallet. Before save: ${
-        sellerWallet.balance + listing.price
-      }`
-    );
     sellerWallet.balance += listing.price;
     await sellerWallet.save({ transaction });
     console.log(
       `Added ${listing.price} to seller's wallet (ID: ${sellerWallet.id}). New balance: ${sellerWallet.balance}`
     );
 
-    // Transfer ownership (update the wallet_id or user_id in the listing)
+    // Create a transaction record for the seller's wallet
+    await EwalletTransaction.create(
+      {
+        userId: sellerWallet.user_id,
+        walletId: sellerWallet.id,
+        coinId: sellerWallet.coin_id,
+        type: "deposit",
+        amount: listing.price,
+        description: `Sale of listing ${listingId}`,
+        date: new Date(),
+        listingId: listing.id,
+        status: "completed",
+      },
+      { transaction }
+    );
+
+    // Transfer ownership
     listing.wallet_id = buyerWallet.id;
     listing.sold = true;
     await listing.save({ transaction });
@@ -173,13 +207,13 @@ const purchaseItem = asyncHandler(async (req, res) => {
       `Listing ownership transferred to buyer's wallet (ID: ${buyerWallet.id}) and marked as sold`
     );
 
-    // Commit the transaction if everything is successful
+    // Commit the transaction
     await transaction.commit();
     console.log("Transaction committed successfully");
 
     res.status(200).json({ message: "Purchase successful", listing });
   } catch (error) {
-    // Rollback the transaction in case of any error
+    // Rollback the transaction in case of error
     await transaction.rollback();
     console.error("Transaction failed and rolled back due to error:", error);
     res.status(500).json({ message: "Purchase failed" });
