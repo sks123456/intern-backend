@@ -26,6 +26,9 @@ Listing.belongsTo(Coin, { foreignKey: "payBy" });
 // Listing model
 Listing.belongsTo(User, { foreignKey: "wallet_id", as: "user" }); // Alias 'user' for Listing model
 
+// Define associations
+Wallet.belongsTo(Coin, { foreignKey: "coin_id" });
+Coin.hasMany(Wallet, { foreignKey: "coin_id" });
 module.exports = {
   User,
   Contact,

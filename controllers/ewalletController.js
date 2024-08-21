@@ -1,19 +1,18 @@
-const Wallet = require("../models/userwalletModel");
-
-const User = require("../models/userModel");
-const Coin = require("../models/coinsModel");
+const { Wallet, User, Coin } = require("../models/index");
 
 const createWallet = async (req, res) => {
-  const { coin } = req.body; // e.g., 'BTC', 'ETH', 'XRP'
+  const { coin_id } = req.body; // e.g., 'BTC', 'ETH', 'XRP'
   const user_id = req.user.id; // Assuming user ID is extracted from token
 
-  if (!coin) {
+  if (!coin_id) {
     return res.status(400).json({ message: "Coin type is required" });
   }
 
   try {
     // Check if wallet already exists for the user and coin
-    const existingWallet = await Wallet.findOne({ where: { user_id, coin } });
+    const existingWallet = await Wallet.findOne({
+      where: { user_id, coin_id },
+    });
     if (existingWallet) {
       return res
         .status(400)
@@ -23,7 +22,7 @@ const createWallet = async (req, res) => {
     // Create new wallet
     const newWallet = await Wallet.create({
       user_id,
-      coin,
+      coin_id,
       balance: 0, // Initialize balance to 0
     });
 
@@ -41,7 +40,18 @@ const getWallets = async (req, res) => {
   console.log(req.user.id);
 
   try {
-    const wallets = await Wallet.findAll({ where: { user_id } });
+    // Fetch wallets with associated coins
+    const wallets = await Wallet.findAll({
+      where: { user_id },
+      include: [
+        {
+          model: Coin,
+          attributes: ["id", "name", "symbol"], // Adjust attributes if needed
+        },
+      ],
+    });
+
+    // Return the wallets with coin details
     res.json(wallets);
   } catch (error) {
     res.status(500).json({ message: "Error fetching wallets", error });

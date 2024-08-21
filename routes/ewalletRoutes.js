@@ -14,7 +14,7 @@ const router = express.Router();
 router.use(validateToken);
 
 router.get("/", getWallets);
-router.post("/", createWallet);
+router.post("/create-wallet", createWallet);
 router.post("/deposit", deposit);
 router.post("/withdraw", withdraw);
 router.post("/purchase", purchase);
