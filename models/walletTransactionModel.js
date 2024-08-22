@@ -58,8 +58,8 @@ EwalletTransaction.init(
   },
   {
     sequelize,
-    modelName: "EwalletTransaction",
-    tableName: "ewalletTransactions",
+    modelName: "ewalletTransaction",
+    tableName: "ewallettransactions",
     timestamps: false,
   }
 );
