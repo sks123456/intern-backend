@@ -25,6 +25,20 @@ const Listing = sequelize.define(
       type: DataTypes.DOUBLE,
       allowNull: false,
     },
+    mercQuantity: {
+      type: DataTypes.DOUBLE,
+      allowNull: false,
+    },
+    mercUnit: {
+      type: DataTypes.INTEGER,
+      allowNull: false,
+      references: {
+        model: "coins",
+        key: "id",
+      },
+      onDelete: "CASCADE",
+      onUpdate: "CASCADE",
+    },
     payBy: {
       type: DataTypes.INTEGER,
       allowNull: false,
@@ -37,6 +51,16 @@ const Listing = sequelize.define(
     },
 
     wallet_id: {
+      type: DataTypes.INTEGER,
+      allowNull: false,
+      references: {
+        model: "wallets",
+        key: "id",
+      },
+      onDelete: "CASCADE",
+      onUpdate: "CASCADE",
+    },
+    wallet_id_out: {
       type: DataTypes.INTEGER,
       allowNull: false,
       references: {

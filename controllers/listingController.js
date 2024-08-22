@@ -60,7 +60,17 @@ const getListings = asyncHandler(async (req, res) => {
 //@route public /api/listings
 //@access public
 const createListing = async (req, res) => {
-  const { title, description, category, price, wallet_id, pay_by } = req.body;
+  const {
+    title,
+    description,
+    category,
+    price,
+    wallet_id,
+    pay_by,
+    mercQuantity,
+    mercUnit,
+    wallet_id_out,
+  } = req.body;
 
   // Handling file
   // const image = req.files.image ? req.files.image[0] : null;
@@ -73,6 +83,9 @@ const createListing = async (req, res) => {
       price,
       wallet_id,
       payBy: pay_by,
+      mercQuantity,
+      mercUnit,
+      wallet_id_out,
       user_id: req.user.id,
       // Optionally handle image upload path
     });

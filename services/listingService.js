@@ -19,7 +19,7 @@ const purchaseListing = async (listingId, userId, tx) => {
         { model: Wallet, attributes: ["id", "user_id"] },
         { model: Coin, attributes: ["id", "symbol"] },
       ],
-      tx,
+      transaction: tx, // Correct transaction option
       lock: true,
     });
 
@@ -36,7 +36,7 @@ const purchaseListing = async (listingId, userId, tx) => {
     // Fetch buyer's wallet
     const buyerWallet = await Wallet.findOne({
       where: { user_id: userId, coin_id: listing.payBy },
-      tx,
+      transaction: tx,
       lock: true,
     });
 
@@ -57,7 +57,7 @@ const purchaseListing = async (listingId, userId, tx) => {
 
     // Deduct from buyer's wallet and record tx
     buyerWallet.balance -= listing.price;
-    await buyerWallet.save({ tx });
+    await buyerWallet.save({ transaction: tx });
 
     console.log(
       `Deducted ${listing.price} from buyer's wallet. New balance: ${buyerWallet.balance}`
@@ -75,15 +75,15 @@ const purchaseListing = async (listingId, userId, tx) => {
         date: new Date(),
         listingId: listing.id,
       },
-      { tx }
+      { transaction: tx }
     );
 
-    console.log("Buyer tx recorded successfully");
+    console.log("Buyer transaction recorded successfully");
 
-    // Fetch and update seller's wallet
+    // Fetch and update seller's wallet for payment
     const sellerWallet = await Wallet.findOne({
       where: { id: listing.wallet_id },
-      tx,
+      transaction: tx,
       lock: true,
     });
 
@@ -94,7 +94,7 @@ const purchaseListing = async (listingId, userId, tx) => {
     }
 
     sellerWallet.balance += listing.price;
-    await sellerWallet.save({ tx });
+    await sellerWallet.save({ transaction: tx });
 
     console.log(
       `Added ${listing.price} to seller's wallet. New balance: ${sellerWallet.balance}`
@@ -112,28 +112,110 @@ const purchaseListing = async (listingId, userId, tx) => {
         listingId: listing.id,
         status: "completed",
       },
-      { tx }
+      { transaction: tx }
     );
 
-    console.log("Seller tx recorded successfully");
+    console.log("Seller transaction recorded successfully");
+
+    // Handle the transfer of `mercQuantity` from seller to buyer
+    const sellerOutWallet = await Wallet.findOne({
+      where: { id: listing.wallet_id_out },
+      transaction: tx,
+      lock: true,
+    });
+
+    if (!sellerOutWallet || sellerOutWallet.balance < listing.mercQuantity) {
+      console.log("Insufficient mercQuantity in seller's wallet");
+      await tx.rollback();
+      return {
+        success: false,
+        error: "Insufficient quantity for the transfer",
+      };
+    }
+
+    sellerOutWallet.balance -= listing.mercQuantity;
+    await sellerOutWallet.save({ transaction: tx });
+
+    console.log(
+      `Deducted ${listing.mercQuantity} from seller's outgoing wallet. New balance: ${sellerOutWallet.balance}`
+    );
+
+    await EwalletTransaction.create(
+      {
+        userId: sellerOutWallet.user_id,
+        walletId: sellerOutWallet.id,
+        coinId: sellerOutWallet.coin_id,
+        type: "transfer",
+        amount: listing.mercQuantity,
+        description: `Transfered quantity for listing ${listingId}`,
+        date: new Date(),
+        listingId: listing.id,
+        status: "completed",
+      },
+      { transaction: tx }
+    );
+
+    // Credit `mercQuantity` to buyer's wallet
+    const buyerMercWallet = await Wallet.findOne({
+      where: { user_id: userId, coin_id: listing.mercUnit },
+      transaction: tx,
+      lock: true,
+    });
+
+    if (!buyerMercWallet) {
+      console.log("Creating new wallet for the buyer for mercUnit");
+      // If buyer doesn't have a wallet for mercUnit, create one
+      buyerMercWallet = await Wallet.create(
+        {
+          user_id: userId,
+          coin_id: listing.mercUnit,
+          balance: listing.mercQuantity,
+        },
+        { transaction: tx }
+      );
+    } else {
+      buyerMercWallet.balance += listing.mercQuantity;
+      await buyerMercWallet.save({ transaction: tx });
+    }
+
+    console.log(
+      `Added ${listing.mercQuantity} to buyer's wallet. New balance: ${buyerMercWallet.balance}`
+    );
+
+    await EwalletTransaction.create(
+      {
+        userId: buyerMercWallet.user_id,
+        walletId: buyerMercWallet.id,
+        coinId: buyerMercWallet.coin_id,
+        type: "deposit",
+        amount: listing.mercQuantity,
+        description: `Received quantity for listing ${listingId}`,
+        date: new Date(),
+        listingId: listing.id,
+        status: "completed",
+      },
+      { transaction: tx }
+    );
+
+    console.log("Buyer received quantity transaction recorded successfully");
 
     // Update listing ownership and mark as sold
     listing.wallet_id = buyerWallet.id;
     listing.sold = true;
-    await listing.save({ tx });
+    await listing.save({ transaction: tx });
 
     console.log(`Listing ownership transferred to buyer and marked as sold`);
 
-    // Commit tx
+    // Commit the transaction
     await tx.commit();
-    console.log("tx committed successfully");
+    console.log("Transaction committed successfully");
 
     return { success: true, listing };
   } catch (error) {
     // Rollback in case of failure
-    console.error("tx failed, rolling back. Error:", error);
+    console.error("Transaction failed, rolling back. Error:", error);
     await tx.rollback();
-    return { success: false, error: "tx failed" };
+    return { success: false, error: "Transaction failed" };
   }
 };
 
