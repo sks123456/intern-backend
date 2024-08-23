@@ -1,5 +1,5 @@
 const express = require("express");
-const errorHandler = require("./middleware/errorHandler");
+const errorHandler = require("./middlewares/errorHandler");
 const dotenv = require("dotenv").config();
 const cors = require("cors");
 const sequelize = require("./config/testConnection"); // Import the sequelize instance
@@ -9,7 +9,7 @@ const app = express();
 const port = process.env.PORT || 5001;
 
 // 2 origin? this should be your frontend origin
-const allowedOrigins = ["http://localhost:3000", "http://localhost:5173", "*"];
+const allowedOrigins = ["http://localhost:3000"];
 
 const corsOptions = {
   origin: (origin, callback) => {

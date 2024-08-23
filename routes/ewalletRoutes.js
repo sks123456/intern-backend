@@ -8,7 +8,7 @@ const {
   getAvailableCoins,
   getTransactionHistory,
 } = require("../controllers/ewalletController");
-const validateToken = require("../middleware/validateTokenHandler");
+const validateToken = require("../middlewares/validateTokenHandler");
 
 const router = express.Router();
 router.use(validateToken);

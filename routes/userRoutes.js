@@ -4,7 +4,7 @@ const {
   loginUser,
   currentUser,
 } = require("../controllers/userController");
-const validateToken = require("../middleware/validateTokenHandler");
+const validateToken = require("../middlewarse/validateTokenHandler");
 
 const router = express.Router();
 
